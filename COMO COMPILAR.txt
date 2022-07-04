@@ -1,0 +1,3 @@
+ejercutar make desde la consola de comandos mingw64
+
+LEER EL MAKEFILE QUE HAY AQUI, HAY COMENTARIOS DE COMO COMPILAR CON UN SDL2 "PORTABLE"
