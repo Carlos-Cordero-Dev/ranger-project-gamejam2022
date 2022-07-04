@@ -1,5 +1,5 @@
 all:
-	g++ -std=c++17 -mwindows main.cpp -o main -ID:\DevkitPro\msys2\mingw64\include\SDL2 -LD:\DevkitPro\msys2\mingw64\lib -LD:\DevkitPro\msys2\mingw64\lib -Wall -lmingw32 -lSDL2main -lSDL2 -mconsole -lSDL2_Image -lSDL2_Mixer -lSDL2_ttf -lopengl32
+	g++ -std=c++17 -mwindows main.cpp -o main -ID:\DevkitPro\msys2\mingw64\include\SDL2 -LD:\DevkitPro\msys2\mingw64\lib -Wall -lmingw32 -lSDL2main -lSDL2 -mconsole -lSDL2_Image -lSDL2_Mixer -lSDL2_ttf -lopengl32
 
 # HACER -I y -L localmente (llevandote tu la carpeta SLD2)
 # -I -----------------------------

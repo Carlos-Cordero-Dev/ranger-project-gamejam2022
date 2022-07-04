@@ -4,13 +4,34 @@
 #include <time.h>
 #include <math.h>
 #include "FIFO.cpp"
+#include "pointInsidePoly.cpp"
 #include <SDL2/SDL.h>
 // #include <SDL2/SDL_image.h>
 // #include <SDL2/SDL_mixer.h>
 // #include <SDL2/SDL_ttf.h>
-
+# define M_PI         3.141592653589793238462643383279502884L /* pi */
 const int WIDTH = 1040, HEIGHT = 585;
+const int MARGIN_TO_CLOSE_POLY = 80;
 
+struct enemy{
+  Point boundingBox[4]; // 0 topleft, 1 topright, 2 botright, 3botleft
+  bool captured = false;
+  int timeMilisecondsSinceCaptured = 0.0f;
+  int hp= 50;
+};
+enemy enemy1;
+void InitializeEnemy1()
+{
+  enemy1.boundingBox[0].x = WIDTH/2;
+  enemy1.boundingBox[0].y = HEIGHT/2;
+  enemy1.boundingBox[1].x = enemy1.boundingBox[0].x + 100;
+  enemy1.boundingBox[1].y = enemy1.boundingBox[0].y;
+  enemy1.boundingBox[2].x = enemy1.boundingBox[0].x +100;
+  enemy1.boundingBox[2].y = enemy1.boundingBox[0].y +100;
+  enemy1.boundingBox[3].x = enemy1.boundingBox[0].x;
+  enemy1.boundingBox[3].y = enemy1.boundingBox[0].y +100;
+
+}
 // void draw_rects(SDL_Renderer *renderer, int x, int y)
 // {
 //     // R
@@ -29,6 +50,24 @@ const int WIDTH = 1040, HEIGHT = 585;
 //     SDL_RenderFillRect(renderer, &b);
 // }
 
+void DrawCircle(int radius,int x, int y,SDL_Renderer *renderer)
+{
+  SDL_SetRenderDrawColor(renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);
+
+  int KCirclePoints = 400;
+  float angle = M_PI * 2 / KCirclePoints;
+  for(int i=0;i<KCirclePoints;i+=2)
+  {
+    float x1 = cos(i * angle) * radius;
+    float y1 = sin(i * angle) * radius;
+
+    float x2 = cos((i+1) * angle) * radius;
+    float y2 = sin((i+1) * angle) * radius;
+
+    SDL_RenderDrawLineF(renderer, x + x1, y + y1,x + x2,y + y2);
+  }
+}
+
 void DrawCurrentPolygon(Coord *stack,SDL_Renderer *renderer)
 {
   if(stack!=nullptr && stack->nextCoord!=nullptr)
@@ -38,6 +77,11 @@ void DrawCurrentPolygon(Coord *stack,SDL_Renderer *renderer)
     {
       SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
       SDL_RenderDrawLineF(renderer, aux->x,aux->y,aux->nextCoord->x,aux->nextCoord->y);
+
+      if((aux->nextCoord)->nextCoord==nullptr)
+      {
+        DrawCircle(MARGIN_TO_CLOSE_POLY,aux->nextCoord->x,aux->nextCoord->y,renderer);
+      }
     }
   }
 }
@@ -46,11 +90,10 @@ bool IsPolygonClosed(Coord *stack, int x,int y)
 {
   if(stack!=nullptr && stack->nextCoord!=nullptr)
   {
-    if(GetStackCount(stack) > 10)
+    if(GetStackCount(stack) > MARGIN_TO_CLOSE_POLY / 2)
     {
-      int margin = 20;
       Coord *aux = BotStack(stack,0);
-      if(abs(aux->x - x) <= margin && abs (aux->y - y) <= margin ) return true;
+      if(abs(aux->x - x) <= MARGIN_TO_CLOSE_POLY && abs (aux->y - y) <= MARGIN_TO_CLOSE_POLY ) return true;
       else return false;
     }
     else return false;
@@ -59,15 +102,29 @@ bool IsPolygonClosed(Coord *stack, int x,int y)
   else return false;
 }
 
-void DrawCircle(int radius,int x, int y)
+void DrawEnemy(enemy enemy,SDL_Renderer *renderer)
 {
-  SDL_SetRenderDrawColor(renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);
+  if(enemy.captured == false)  SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
+  else  SDL_SetRenderDrawColor(renderer, 0, 255, 0, SDL_ALPHA_OPAQUE);
+  SDL_Rect enemyRectangle;
 
-  
+  enemyRectangle.x =  enemy.boundingBox[0].x;
+  enemyRectangle.y =  enemy.boundingBox[0].y;
+  enemyRectangle.h = enemy.boundingBox[2].y - enemy.boundingBox[0].y;
+  enemyRectangle.w = enemy.boundingBox[2].x - enemy.boundingBox[0].x;
 
-  SDL_RenderDrawLineF(renderer, aux->x,aux->y,aux->nextCoord->x,aux->nextCoord->y);
+  SDL_RenderFillRect(renderer,&enemyRectangle);
 }
 
+// bool isEnemyInsidePoly(Coord stack,enemy enemy)
+// {
+//   // wn_PnPoly(): winding number test for a point in a polygon
+//   //      Input:   P = a point,
+//   //               V[] = vertex points of a polygon V[n+1] with V[n]=V[0]
+//   //      Return:  wn = the winding number (=0 only when P is outside)
+//   int
+//   wn_PnPoly( Point P, Point* V, int n )
+// }
 int main( int argc, char *argv[] )
 {
 
@@ -103,7 +160,7 @@ int main( int argc, char *argv[] )
     unsigned int lastTime = 0, currentTime;
     bool mouseRightButtonPressed = false;
     Coord* stack = nullptr;
-
+    InitializeEnemy1();
     while ( GameIsRunning )
     {
       /*event handling*/
@@ -167,28 +224,75 @@ int main( int argc, char *argv[] )
 
              if(IsPolygonClosed(stack,event.motion.x,event.motion.y))
              {
-               //+1 a las vueltas
-               printf("ONE SCORE UP\n");
-               DestroyStack(&stack);
+               //see if enemy is inside of poly
+               //for that we need to have coord[n] == coord[0]
+               Coord *aux;
+               for(aux=stack;aux->nextCoord!=nullptr;aux=aux->nextCoord)
+               {
+                 if((aux->nextCoord)->nextCoord==nullptr)
+                          InsertCoord(&stack,aux->nextCoord->x,aux->nextCoord->y);
+               }
+
+               //now we can run the function // wn_PnPoly(): winding number test for a point in a polygon
+               //      Input:   P = a point,
+               //               V[] = vertex points of a polygon V[n+1] with V[n]=V[0]
+               //      Return:  wn = the winding number (=0 only when P is outside)
+
+               Point* polyPoints = (Point*) malloc(GetStackCount(stack) * sizeof(Point));
+               int counter = 0;
+               for(aux=stack;aux->nextCoord!=nullptr;aux=aux->nextCoord)
+               {
+                 polyPoints[counter].x = aux->x;
+                 polyPoints[counter].y = aux->y;
+                 counter++;
+               }
+               counter = 0;
+               for(int i=0;i<4;i++)
+               {
+                 if(wn_PnPoly(enemy1.boundingBox[i], polyPoints, GetStackCount(stack))!= 0)
+                 {
+                   enemy1.hp-=1;
+                   printf("Current hp: %d\n",enemy1.hp);
+                   enemy1.captured = true;
+                   break;
+                 }
+               }
+               free(polyPoints); polyPoints = nullptr;
+               // DestroyStack(&aux); aux=nullptr;
+               DestroyStack(&stack); stack = nullptr;
              }
 
         }
       } //end of event handling
 
-      //every frame
+      //timer related stuff
       currentTime = SDL_GetTicks();
       if (currentTime > lastTime + 1000/100) {
 
         Coord *lastCoord = ExtractFIFO(&stack);
-        // if(lastCoord != NULL) printf("Se ha extraido %d %d\n",lastCoord->x,lastCoord->y);
         free(lastCoord); lastCoord = nullptr;
         lastTime = currentTime;
+      }
+
+      if(enemy1.captured)
+      {
+        if(enemy1.timeMilisecondsSinceCaptured <= 1000)
+        {
+          enemy1.timeMilisecondsSinceCaptured++;
+        }
+        else
+        {
+          enemy1.captured = false;
+          enemy1.timeMilisecondsSinceCaptured = 0;
+        }
       }
 
       SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00);
       SDL_RenderClear(renderer);
 
       DrawCurrentPolygon(stack,renderer);
+      DrawEnemy(enemy1,renderer);
+
       SDL_RenderPresent(renderer);
 
       //Update the surface (SOLO HAY QUE HACERLO CUANDO VAYAN A HABER CAMBIOS VISUALES)
