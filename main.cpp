@@ -33,23 +33,6 @@ void InitializeEnemy1()
   enemy1.boundingBox[3].y = enemy1.boundingBox[0].y +100;
 
 }
-// void draw_rects(SDL_Renderer *renderer, int x, int y)
-// {
-//     // R
-//     SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
-//     SDL_Rect r = {x, y, 64, 64};
-//     SDL_RenderFillRect(renderer, &r);
-//
-//     // G
-//     SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
-//     SDL_Rect g = {x + 64, y, 64, 64};
-//     SDL_RenderFillRect(renderer, &g);
-//
-//     // B
-//     SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
-//     SDL_Rect b = {x + 128, y, 64, 64};
-//     SDL_RenderFillRect(renderer, &b);
-// }
 
 void DrawCircle(int radius,int x, int y,SDL_Renderer *renderer)
 {
@@ -117,15 +100,19 @@ void DrawEnemy(enemy enemy,SDL_Renderer *renderer)
   SDL_RenderFillRect(renderer,&enemyRectangle);
 }
 
-// bool isEnemyInsidePoly(Coord stack,enemy enemy)
-// {
-//   // wn_PnPoly(): winding number test for a point in a polygon
-//   //      Input:   P = a point,
-//   //               V[] = vertex points of a polygon V[n+1] with V[n]=V[0]
-//   //      Return:  wn = the winding number (=0 only when P is outside)
-//   int
-//   wn_PnPoly( Point P, Point* V, int n )
-// }
+void ShowStackVSpolyPoints(Coord *stack,Point *polyPoints)
+{
+  int i = 0;
+  Coord *aux;
+  printf("=====================\n");
+  for(aux=stack;aux!=nullptr;aux=aux->nextCoord)
+  {
+    printf("%d %d %f %f\n",aux->x,aux->y,polyPoints[i].x,polyPoints[i].y);
+    i++;
+  }
+  printf("=====================\n");
+}
+
 int main( int argc, char *argv[] )
 {
 
@@ -227,7 +214,7 @@ int main( int argc, char *argv[] )
              {
                if(PolygonHeadCollidingWithLine(stack,20,enemy1.boundingBox[i],enemy1.boundingBox[i<3?(i+1):0]))
                {
-                 printf("POLYGON COLIDED\n");
+                 printf("POLYGON COLLIDED\n");
                  DestroyStack(&stack); stack = nullptr;
                  break;
                }
@@ -243,23 +230,30 @@ int main( int argc, char *argv[] )
                  if((aux->nextCoord)->nextCoord==nullptr)
                           InsertCoord(&stack,aux->nextCoord->x,aux->nextCoord->y);
                }
-
-               //now we can run the function // wn_PnPoly(): winding number test for a point in a polygon
-               //      Input:   P = a point,
-               //               V[] = vertex points of a polygon V[n+1] with V[n]=V[0]
-               //      Return:  wn = the winding number (=0 only when P is outside)
+               // printf("Stack 0: %d %d , stack %d: %d %d\n",BotStack(stack,0)->x,BotStack(stack,0)->y,GetStackCount(stack)-1,stack->x,stack->y);
 
                Point* polyPoints = (Point*) malloc(GetStackCount(stack) * sizeof(Point));
                int counter = 0;
-               for(aux=stack;aux->nextCoord!=nullptr;aux=aux->nextCoord)
+               for(aux=stack;aux!=nullptr;aux=aux->nextCoord)
                {
-                 polyPoints[counter].x = aux->x;
-                 polyPoints[counter].y = aux->y;
+                 polyPoints[counter] = {(float)aux->x,(float)aux->y};
+
+                 // if(counter >0 && counter < GetStackCount(stack))
+                 // {
+                 //   SDL_SetRenderDrawColor(renderer, 255, 0, 255, SDL_ALPHA_OPAQUE);
+                 //   SDL_RenderDrawLineF(renderer, polyPoints[counter-1].x,polyPoints[counter-1].y,
+                 //     polyPoints[counter].x,polyPoints[counter].y);
+                 //     SDL_RenderPresent(renderer);
+                 // }
                  counter++;
                }
+               // printf("V2 Stack 0: %f %f , stack %d: %f %f\n",polyPoints[0].x,polyPoints[0].y,
+               // counter-1,polyPoints[counter-1].x,polyPoints[counter-1].y);
+               // ShowStackVSpolyPoints(stack,polyPoints);
                counter = 0;
                for(int i=0;i<4;i++)
                {
+
                  if(wn_PnPoly(enemy1.boundingBox[i], polyPoints, GetStackCount(stack))!= 0)
                  {
                    enemy1.hp-=1;

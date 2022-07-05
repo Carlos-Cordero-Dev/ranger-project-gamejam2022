@@ -33,13 +33,13 @@ void ShowStack(Coord *stack)
   printf("=====================\n");
   for(aux=stack;aux!=nullptr;aux=aux->nextCoord) printf("%d %d\n",aux->x,aux->y);
   printf("=====================\n");
-
 }
+
 int GetStackCount(Coord *stack)
 {
   int count = 0;
   Coord *aux;
-  for(aux=stack;aux->nextCoord!=nullptr;aux=aux->nextCoord) count++;
+  for(aux=stack;aux!=nullptr;aux=aux->nextCoord) count++;
   return count;
 }
 Coord *BotStack(Coord *stack,int mode)
