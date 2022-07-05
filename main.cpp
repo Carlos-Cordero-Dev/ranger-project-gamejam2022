@@ -5,6 +5,7 @@
 #include <math.h>
 #include "FIFO.cpp"
 #include "pointInsidePoly.cpp"
+#include "colission.cpp"
 #include <SDL2/SDL.h>
 // #include <SDL2/SDL_image.h>
 // #include <SDL2/SDL_mixer.h>
@@ -221,6 +222,16 @@ int main( int argc, char *argv[] )
 
              lastMousePosX = event.motion.x;
              lastMousePosY = event.motion.y;
+
+             for(int i=0;i<4;i++)
+             {
+               if(PolygonHeadCollidingWithLine(stack,20,enemy1.boundingBox[i],enemy1.boundingBox[i<3?(i+1):0]))
+               {
+                 printf("POLYGON COLIDED\n");
+                 DestroyStack(&stack); stack = nullptr;
+                 break;
+               }
+             }
 
              if(IsPolygonClosed(stack,event.motion.x,event.motion.y))
              {
