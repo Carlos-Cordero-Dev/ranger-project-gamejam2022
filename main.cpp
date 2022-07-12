@@ -210,6 +210,7 @@ int main( int argc, char *argv[] )
              lastMousePosX = event.motion.x;
              lastMousePosY = event.motion.y;
 
+             //check if the first few points of the polygon drawn are colliding with the enmey hurtbox
              for(int i=0;i<4;i++)
              {
                if(PolygonHeadCollidingWithLine(stack,20,enemy1.boundingBox[i],enemy1.boundingBox[i<3?(i+1):0]))
@@ -220,9 +221,9 @@ int main( int argc, char *argv[] )
                }
              }
 
+             //see if enemy is inside of poly
              if(IsPolygonClosed(stack,event.motion.x,event.motion.y))
              {
-               //see if enemy is inside of poly
                //for that we need to have coord[n] == coord[0]
                Coord *aux;
                for(aux=stack;aux->nextCoord!=nullptr;aux=aux->nextCoord)
@@ -230,7 +231,6 @@ int main( int argc, char *argv[] )
                  if((aux->nextCoord)->nextCoord==nullptr)
                           InsertCoord(&stack,aux->nextCoord->x,aux->nextCoord->y);
                }
-               // printf("Stack 0: %d %d , stack %d: %d %d\n",BotStack(stack,0)->x,BotStack(stack,0)->y,GetStackCount(stack)-1,stack->x,stack->y);
 
                Point* polyPoints = (Point*) malloc(GetStackCount(stack) * sizeof(Point));
                int counter = 0;
@@ -238,23 +238,13 @@ int main( int argc, char *argv[] )
                {
                  polyPoints[counter] = {(float)aux->x,(float)aux->y};
 
-                 // if(counter >0 && counter < GetStackCount(stack))
-                 // {
-                 //   SDL_SetRenderDrawColor(renderer, 255, 0, 255, SDL_ALPHA_OPAQUE);
-                 //   SDL_RenderDrawLineF(renderer, polyPoints[counter-1].x,polyPoints[counter-1].y,
-                 //     polyPoints[counter].x,polyPoints[counter].y);
-                 //     SDL_RenderPresent(renderer);
-                 // }
                  counter++;
                }
-               // printf("V2 Stack 0: %f %f , stack %d: %f %f\n",polyPoints[0].x,polyPoints[0].y,
-               // counter-1,polyPoints[counter-1].x,polyPoints[counter-1].y);
-               // ShowStackVSpolyPoints(stack,polyPoints);
                counter = 0;
+
                for(int i=0;i<4;i++)
                {
-
-                 if(wn_PnPoly(enemy1.boundingBox[i], polyPoints, GetStackCount(stack))!= 0)
+                 if(pnpoly(enemy1.boundingBox[i], polyPoints, GetStackCount(stack))!= 0)
                  {
                    enemy1.hp-=1;
                    printf("Current hp: %d\n",enemy1.hp);
@@ -263,7 +253,6 @@ int main( int argc, char *argv[] )
                  }
                }
                free(polyPoints); polyPoints = nullptr;
-               // DestroyStack(&aux); aux=nullptr;
                DestroyStack(&stack); stack = nullptr;
              }
 

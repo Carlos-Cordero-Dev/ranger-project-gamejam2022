@@ -84,3 +84,26 @@ wn_PnPoly( Point P, Point* V, int n )
 }
 
 //===================================================================
+
+//modified version of: https://stackoverflow.com/questions/11716268/point-in-polygon-algorithm#:~:text=By%20repeatedly%20inverting%20the%20value,number%2C%20the%20point%20is%20outside.
+int pnpoly(Point P,Point* V,int n)
+{
+  int i, j, c = 0;
+  for (i = 0, j = n-1; i < n; j = i++) {
+    if ( ((V[i].y>P.y) != (V[j].y>P.y)) &&
+     (P.x < (V[j].x-V[i].x) * (P.y-V[i].y) / (V[j].y-V[i].y) + V[i].x) )
+       c = !c;
+  }
+  return c;
+}
+
+// int pnpoly(int nvert, float *vertx, float *verty, float testx, float testy)
+// {
+//   int i, j, c = 0;
+//   for (i = 0, j = nvert-1; i < nvert; j = i++) {
+//     if ( ((verty[i]>testy) != (verty[j]>testy)) &&
+//      (testx < (vertx[j]-vertx[i]) * (testy-verty[i]) / (verty[j]-verty[i]) + vertx[i]) )
+//        c = !c;
+//   }
+//   return c;
+// }
