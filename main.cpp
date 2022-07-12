@@ -7,7 +7,7 @@
 #include "pointInsidePoly.cpp"
 #include "colission.cpp"
 #include <SDL2/SDL.h>
-// #include <SDL2/SDL_image.h>
+#include <SDL2/SDL_image.h>
 // #include <SDL2/SDL_mixer.h>
 // #include <SDL2/SDL_ttf.h>
 # define M_PI         3.141592653589793238462643383279502884L /* pi */
@@ -19,9 +19,14 @@ struct enemy{
   bool captured = false;
   int timeMilisecondsSinceCaptured = 0.0f;
   int hp= 50;
+
+  //sprite
+  SDL_Texture* texture = nullptr;
+  int img_width,img_height;
+
 };
 enemy enemy1;
-void InitializeEnemy1()
+void InitializeEnemy1(SDL_Renderer *renderer)
 {
   enemy1.boundingBox[0].x = WIDTH/2;
   enemy1.boundingBox[0].y = HEIGHT/2;
@@ -31,6 +36,13 @@ void InitializeEnemy1()
   enemy1.boundingBox[2].y = enemy1.boundingBox[0].y +100;
   enemy1.boundingBox[3].x = enemy1.boundingBox[0].x;
   enemy1.boundingBox[3].y = enemy1.boundingBox[0].y +100;
+
+  //Sprites handling (source: https://github.com/libsdl-org/SDL_image/blob/main/showimage.c)
+  enemy1.texture = IMG_LoadTexture(renderer,"./resources/Ball_and_Chain_Bot/hit.png");
+  if (!enemy1.texture) {
+       SDL_Log("Couldn't load image: %s\n", SDL_GetError());
+   }
+  SDL_QueryTexture(enemy1.texture,NULL,NULL,&enemy1.img_width,&enemy1.img_height);
 
 }
 
@@ -97,7 +109,8 @@ void DrawEnemy(enemy enemy,SDL_Renderer *renderer)
   enemyRectangle.h = enemy.boundingBox[2].y - enemy.boundingBox[0].y;
   enemyRectangle.w = enemy.boundingBox[2].x - enemy.boundingBox[0].x;
 
-  SDL_RenderFillRect(renderer,&enemyRectangle);
+  // SDL_RenderFillRect(renderer,&enemyRectangle);
+  SDL_RenderCopy(renderer,enemy1.texture,NULL,&enemyRectangle);
 }
 
 void ShowStackVSpolyPoints(Coord *stack,Point *polyPoints)
@@ -142,13 +155,15 @@ int main( int argc, char *argv[] )
         return EXIT_FAILURE;
     }
 
+
     SDL_Event event;
     bool GameIsRunning = true;
     int lastMousePosX , lastMousePosY;
     unsigned int lastTime = 0, currentTime;
     bool mouseRightButtonPressed = false;
     Coord* stack = nullptr;
-    InitializeEnemy1();
+
+    InitializeEnemy1(renderer);
     while ( GameIsRunning )
     {
       /*event handling*/
