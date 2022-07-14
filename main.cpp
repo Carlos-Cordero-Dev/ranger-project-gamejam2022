@@ -6,12 +6,14 @@
 #include "FIFO.cpp"
 #include "pointInsidePoly.cpp"
 #include "colission.cpp"
+#include "sprites.cpp"
+#include "levelReader.cpp"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 // #include <SDL2/SDL_mixer.h>
 // #include <SDL2/SDL_ttf.h>
 # define M_PI         3.141592653589793238462643383279502884L /* pi */
-const int WIDTH = 1040, HEIGHT = 585;
+const int WIDTH = 1340, HEIGHT = 800;
 const int MARGIN_TO_CLOSE_POLY = 80;
 
 struct enemy{
@@ -26,17 +28,10 @@ struct enemy{
 
 };
 enemy enemy1;
+
+
 void InitializeEnemy1(SDL_Renderer *renderer)
 {
-  enemy1.boundingBox[0].x = WIDTH/2;
-  enemy1.boundingBox[0].y = HEIGHT/2;
-  enemy1.boundingBox[1].x = enemy1.boundingBox[0].x + 100;
-  enemy1.boundingBox[1].y = enemy1.boundingBox[0].y;
-  enemy1.boundingBox[2].x = enemy1.boundingBox[0].x +100;
-  enemy1.boundingBox[2].y = enemy1.boundingBox[0].y +100;
-  enemy1.boundingBox[3].x = enemy1.boundingBox[0].x;
-  enemy1.boundingBox[3].y = enemy1.boundingBox[0].y +100;
-
   //Sprites handling (source: https://github.com/libsdl-org/SDL_image/blob/main/showimage.c)
   enemy1.texture = IMG_LoadTexture(renderer,"./resources/Ball_and_Chain_Bot/hit.png");
   if (!enemy1.texture) {
@@ -44,7 +39,34 @@ void InitializeEnemy1(SDL_Renderer *renderer)
    }
   SDL_QueryTexture(enemy1.texture,NULL,NULL,&enemy1.img_width,&enemy1.img_height);
 
+  //enemy bounding box
+  enemy1.boundingBox[0].x = WIDTH/2;
+  enemy1.boundingBox[0].y = HEIGHT/2;
+  enemy1.boundingBox[1].x = enemy1.boundingBox[0].x + enemy1.img_width;
+  enemy1.boundingBox[1].y = enemy1.boundingBox[0].y;
+  enemy1.boundingBox[2].x = enemy1.boundingBox[0].x +enemy1.img_width;
+  enemy1.boundingBox[2].y = enemy1.boundingBox[0].y +enemy1.img_height;
+  enemy1.boundingBox[3].x = enemy1.boundingBox[0].x;
+  enemy1.boundingBox[3].y = enemy1.boundingBox[0].y +enemy1.img_height;
+
 }
+
+
+void DrawEnemy(enemy enemy,SDL_Renderer *renderer)
+{
+  if(enemy.captured == false)  SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
+  else  SDL_SetRenderDrawColor(renderer, 0, 255, 0, SDL_ALPHA_OPAQUE);
+  SDL_Rect enemyRectangle;
+
+  enemyRectangle.x =  enemy1.boundingBox[0].x;
+  enemyRectangle.y =  enemy1.boundingBox[0].y;
+  enemyRectangle.h = enemy1.img_height;
+  enemyRectangle.w = enemy1.img_width;
+
+  SDL_RenderFillRect(renderer,&enemyRectangle);
+  // SDL_RenderCopy(renderer,enemy1.texture,NULL,&enemyRectangle);
+}
+
 
 void DrawCircle(int radius,int x, int y,SDL_Renderer *renderer)
 {
@@ -98,21 +120,6 @@ bool IsPolygonClosed(Coord *stack, int x,int y)
   else return false;
 }
 
-void DrawEnemy(enemy enemy,SDL_Renderer *renderer)
-{
-  if(enemy.captured == false)  SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
-  else  SDL_SetRenderDrawColor(renderer, 0, 255, 0, SDL_ALPHA_OPAQUE);
-  SDL_Rect enemyRectangle;
-
-  enemyRectangle.x =  enemy.boundingBox[0].x;
-  enemyRectangle.y =  enemy.boundingBox[0].y;
-  enemyRectangle.h = enemy.boundingBox[2].y - enemy.boundingBox[0].y;
-  enemyRectangle.w = enemy.boundingBox[2].x - enemy.boundingBox[0].x;
-
-  // SDL_RenderFillRect(renderer,&enemyRectangle);
-  SDL_RenderCopy(renderer,enemy1.texture,NULL,&enemyRectangle);
-}
-
 void ShowStackVSpolyPoints(Coord *stack,Point *polyPoints)
 {
   int i = 0;
@@ -164,6 +171,8 @@ int main( int argc, char *argv[] )
     Coord* stack = nullptr;
 
     InitializeEnemy1(renderer);
+    LoadLevelFromFile(&tileset_grass,"./lvl1.level");
+    LoadSpriteSheet(renderer,&tileset_grass);
     while ( GameIsRunning )
     {
       /*event handling*/
@@ -299,6 +308,7 @@ int main( int argc, char *argv[] )
       SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00);
       SDL_RenderClear(renderer);
 
+      DrawMap(tileset_grass,renderer);
       DrawCurrentPolygon(stack,renderer);
       DrawEnemy(enemy1,renderer);
 
@@ -310,9 +320,9 @@ int main( int argc, char *argv[] )
 
     DestroyStack(&stack);
     SDL_FreeSurface( windowSurface ); windowSurface = NULL;
+    // SDL_FreeSurface( spriteSheet ); spriteSheet = NULL;
     SDL_DestroyRenderer(renderer); renderer = NULL;
     SDL_DestroyWindow( window ); window = NULL;
     SDL_Quit( );
-
     return EXIT_SUCCESS;
 }
