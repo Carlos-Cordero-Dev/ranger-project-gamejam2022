@@ -16,7 +16,7 @@ struct SpriteSheet{
   int singleSpriteW,singleSpriteH,spritesPerRow,spritesPerColumn; //sprites per row/column dont match the ones in the spritesheet,
                                                                   //these are meant to match colunns and rows from the .level files
 };
-SpriteSheet tileset_grass,atack_animation,idle_animation;
+SpriteSheet tileset_grass;
 
 void LoadLevelSpriteSheet(SDL_Renderer *renderer,SpriteSheet *spriteSheet,const char *filepath,
   int spriteSheetNumberOfRows,int spriteSheetNumberOfCols,int screenXoffset,int screenYoffset,float screenScaling)
@@ -126,18 +126,18 @@ void DrawMap(SpriteSheet spriteSheet,SDL_Renderer *renderer)
   }
 }
 
-void DrawSpriteFromAnimation(int id,SpriteSheet spriteSheet,SDL_Renderer *renderer)
+void DrawSpriteFromAnimation(int id,SpriteSheet *spriteSheet,int screenXpos,int screenYpos,SDL_Renderer *renderer)
 {
-  if(id < 0 || id >= spriteSheet.spritesPerRow * spriteSheet.spritesPerColumn)
+  if(id < 0 || id >= spriteSheet->spritesPerRow * spriteSheet->spritesPerColumn)
   {
     printf("Tried to draw sprite with incorrect Id\n");
   }
   else
   {
-    // printf("paiting sprite %d\n",id);
-    // printf("size: %d %d\n",spriteSheet.sprites[id].singleSpriteDimensionsRect.w,spriteSheet.sprites[id].singleSpriteDimensionsRect.h);
-    // printf("pos: %d %d\n",spriteSheet.sprites[id].singleSpriteDimensionsRect.x,spriteSheet.sprites[id].singleSpriteDimensionsRect.y);
-    SDL_RenderCopy(renderer,spriteSheet.spriteSheetTexture,&spriteSheet.sprites[id].singleSpriteDimensionsRect,
-      &spriteSheet.sprites[id].onScreenSizeRect);
+    spriteSheet->sprites[id].onScreenSizeRect.x = screenXpos;
+    spriteSheet->sprites[id].onScreenSizeRect.y = screenYpos;
+
+    SDL_RenderCopy(renderer,spriteSheet->spriteSheetTexture,&spriteSheet->sprites[id].singleSpriteDimensionsRect,
+      &spriteSheet->sprites[id].onScreenSizeRect);
   }
 }

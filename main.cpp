@@ -17,57 +17,93 @@ const int WIDTH = 1340, HEIGHT = 800;
 const int MARGIN_TO_CLOSE_POLY = 80;
 
 struct enemy{
-  Point boundingBox[4]; // 0 topleft, 1 topright, 2 botright, 3botleft
+  int enemyPosX,enemyPosY,enemyWidth,enemyHeight; //actual enemy hurtbox dimensions and position
+
   bool captured = false;
   int timeMilisecondsSinceCaptured = 0.0f;
   int hp= 50;
 
-  //sprite
-  SDL_Texture* texture = nullptr;
-  int img_width,img_height;
-
+  //sprites
+  SpriteSheet *animationSet; /*each enemy has its specified animation sets(ex: enemy 1 has atack and idle so far) */
+  int currentNumberOfAnimations = 0;
+  int currentAnimationSetId,currentSpriteId = 0;
+  int animationSetXoffset, animationSetYoffset; //offset from (0,0) of spritesheet to make boundingbox match sprite (to ignore alpha channel)
+  //timers for animations
   int animationCurrentTime, animationLastTime = 0;
 };
-enemy enemy1;
+enemy enemy1; //has atack_animation and idle_animation;
 
-
-void InitializeEnemy1(SDL_Renderer *renderer)
+void ChangeEnemyAnimationSet(enemy *enemy,int animationSetID)
 {
-  //Sprites handling (source: https://github.com/libsdl-org/SDL_image/blob/main/showimage.c)
-  enemy1.texture = IMG_LoadTexture(renderer,"./resources/Ball_and_Chain_Bot/hit.png");
-  if (!enemy1.texture) {
-       SDL_Log("Couldn't load image: %s\n", SDL_GetError());
-   }
-  SDL_QueryTexture(enemy1.texture,NULL,NULL,&enemy1.img_width,&enemy1.img_height);
+  if(animationSetID < 0 || enemy->currentNumberOfAnimations < animationSetID)
+  {
+    printf("AnimationSet ID non existant\n");
+  }
+  else
+  {
+    //spriteSheet->sprites[currentSprite].onScreenSizeRect.w = /*scaling*/screenScaling*spriteSheet->singleSpriteW;
+    float scaling = enemy->animationSet[animationSetID].sprites[0].onScreenSizeRect.w/enemy->animationSet[animationSetID].singleSpriteW;
 
-  //enemy bounding box
-  enemy1.boundingBox[0].x = WIDTH/2;
-  enemy1.boundingBox[0].y = HEIGHT/2;
-  enemy1.boundingBox[1].x = enemy1.boundingBox[0].x + enemy1.img_width;
-  enemy1.boundingBox[1].y = enemy1.boundingBox[0].y;
-  enemy1.boundingBox[2].x = enemy1.boundingBox[0].x +enemy1.img_width;
-  enemy1.boundingBox[2].y = enemy1.boundingBox[0].y +enemy1.img_height;
-  enemy1.boundingBox[3].x = enemy1.boundingBox[0].x;
-  enemy1.boundingBox[3].y = enemy1.boundingBox[0].y +enemy1.img_height;
+    switch (animationSetID) { //each sprite has its own actual size ignoring the alpha channel of the spritesheet
+      case 1: //idle
+      {
+        //(57 , 11) - (73 , 32)
 
+        enemy->enemyWidth = (73 - 57)*scaling;
+        enemy->enemyHeight = (32 - 11)*scaling;
+        //position offset
+        enemy->animationSetXoffset = 57*scaling;
+        enemy->animationSetYoffset = 11*scaling;
+      }
+      break;
+      default: //width and height of the alpha channel
+      {
+        enemy->enemyWidth = enemy->animationSet[animationSetID].sprites[0].onScreenSizeRect.w;
+        enemy->enemyHeight = enemy->animationSet[animationSetID].sprites[0].onScreenSizeRect.h;
+
+        enemy->animationSetXoffset = 0;
+        enemy->animationSetYoffset = 0;
+      }
+      break;
+    }
+
+    enemy->currentSpriteId = 0;
+    enemy->currentAnimationSetId = animationSetID;
+
+    enemy->animationCurrentTime = 0;
+    enemy->animationLastTime = 0;
+  }
 }
-
 
 void DrawEnemy(enemy enemy,SDL_Renderer *renderer)
 {
+  DrawSpriteFromAnimation(enemy.currentSpriteId,&enemy.animationSet[enemy.currentAnimationSetId],
+    enemy.enemyPosX,enemy.enemyPosY,renderer);
+
+  //debug
   if(enemy.captured == false)  SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
   else  SDL_SetRenderDrawColor(renderer, 0, 255, 0, SDL_ALPHA_OPAQUE);
-  SDL_Rect enemyRectangle;
 
-  enemyRectangle.x =  enemy1.boundingBox[0].x;
-  enemyRectangle.y =  enemy1.boundingBox[0].y;
-  enemyRectangle.h = enemy1.img_height;
-  enemyRectangle.w = enemy1.img_width;
+  SDL_Rect debugEnemyCollider;
+  debugEnemyCollider.x =enemy.enemyPosX+enemy.animationSetXoffset;
+  debugEnemyCollider.y =enemy.enemyPosY+enemy.animationSetYoffset;
+  debugEnemyCollider.w =enemy.enemyWidth;
+  debugEnemyCollider.h =enemy.enemyHeight;
 
-  SDL_RenderFillRect(renderer,&enemyRectangle);
-  // SDL_RenderCopy(renderer,enemy1.texture,NULL,&enemyRectangle);
+  SDL_RenderDrawRect(renderer,&debugEnemyCollider);
 }
 
+void EnemyAnimationTimer(enemy *enemy)
+{
+  enemy->animationCurrentTime = SDL_GetTicks();
+  if (enemy->animationCurrentTime > enemy->animationLastTime + 1000/10) {
+
+    enemy->currentSpriteId++;
+    if(enemy->currentSpriteId >= (enemy->animationSet[enemy->currentAnimationSetId].spritesPerRow
+    * enemy->animationSet[enemy->currentAnimationSetId].spritesPerColumn) ) enemy->currentSpriteId = 0;
+    enemy->animationLastTime = enemy->animationCurrentTime;
+  }
+}
 
 void DrawCircle(int radius,int x, int y,SDL_Renderer *renderer)
 {
@@ -121,18 +157,6 @@ bool IsPolygonClosed(Coord *stack, int x,int y)
   else return false;
 }
 
-void ShowStackVSpolyPoints(Coord *stack,Point *polyPoints)
-{
-  int i = 0;
-  Coord *aux;
-  printf("=====================\n");
-  for(aux=stack;aux!=nullptr;aux=aux->nextCoord)
-  {
-    printf("%d %d %f %f\n",aux->x,aux->y,polyPoints[i].x,polyPoints[i].y);
-    i++;
-  }
-  printf("=====================\n");
-}
 
 int main( int argc, char *argv[] )
 {
@@ -171,15 +195,23 @@ int main( int argc, char *argv[] )
     bool mouseRightButtonPressed = false;
     Coord* stack = nullptr;
 
-    InitializeEnemy1(renderer);
+    //map initialization
     LoadLevelFromFile(&tileset_grass,"./lvl1.level");
     LoadLevelSpriteSheet(renderer,&tileset_grass,"./resources/Top_Down-Basic/Tileset_Grass.png",8,8 /*8 x 8 spritesheet*/,
       100,0/*x,y starting pos on screen*/,4.0f /*scaling*/);
-    LoadSpriteSheetAnimation(renderer,&atack_animation,"./resources/Ball_and_Chain_Bot/attack.png",
-        8,1,100,100,4.0f);
-    LoadSpriteSheetAnimation(renderer,&idle_animation,"./resources/Ball_and_Chain_Bot/idle.png",
-        5,1,200,200,4.0f);
-    int testAnimationId = 0;
+
+    //enemy initilization
+      //enemy1
+      enemy1.enemyPosX = WIDTH / 2;
+      enemy1.enemyPosY = HEIGHT / 2;
+      enemy1.currentNumberOfAnimations = 2;
+      enemy1.animationSet = (SpriteSheet*) malloc(enemy1.currentNumberOfAnimations*sizeof(SpriteSheet));
+      LoadSpriteSheetAnimation(renderer,&enemy1.animationSet[0],"./resources/Ball_and_Chain_Bot/attack.png",
+          8,1,100,100,4.0f);
+      LoadSpriteSheetAnimation(renderer,&enemy1.animationSet[1],"./resources/Ball_and_Chain_Bot/idle.png",
+          5,1,200,200,4.0f);
+      ChangeEnemyAnimationSet(&enemy1,1);
+
     while ( GameIsRunning )
     {
       /*event handling*/
@@ -204,13 +236,27 @@ int main( int argc, char *argv[] )
             }
 
             const Uint8 *state = SDL_GetKeyboardState(NULL);
+            float speed = 5.0f;
             if(state[SDL_SCANCODE_RIGHT])
             {
               // printf("tecla derecha apretada\n");
               // pintandoLinea ? pintandoLinea = false : pintandoLinea = true;
-              ShowStack(stack);
+              // ShowStack(stack);
+              enemy1.enemyPosX+=speed;
+            }
+            else if(state[SDL_SCANCODE_LEFT])
+            {
+              enemy1.enemyPosX-=speed;
             }
 
+            if(state[SDL_SCANCODE_UP])
+            {
+              enemy1.enemyPosY-=speed;
+            }
+            else if(state[SDL_SCANCODE_DOWN])
+            {
+              enemy1.enemyPosY+=speed;
+            }
           }
           break;
 
@@ -242,15 +288,22 @@ int main( int argc, char *argv[] )
              lastMousePosY = event.motion.y;
 
              //check if the first few points of the polygon drawn are colliding with the enmey hurtbox
-             for(int i=0;i<4;i++)
+             // for(int i=0;i<4;i++)
+             // {
+             //   if(PolygonHeadCollidingWithLine(stack,20,enemy1.boundingBox[i],enemy1.boundingBox[i<3?(i+1):0]))
+             //   {
+             //     printf("POLYGON COLLIDED\n");
+             //     DestroyStack(&stack); stack = nullptr;
+             //     break;
+             //   }
+             // }
+             if(PolygonHeadCollidingWithBox(stack,20,enemy1.enemyPosX+enemy1.animationSetXoffset,enemy1.enemyPosY+enemy1.animationSetYoffset,
+               enemy1.enemyWidth,enemy1.enemyHeight))
              {
-               if(PolygonHeadCollidingWithLine(stack,20,enemy1.boundingBox[i],enemy1.boundingBox[i<3?(i+1):0]))
-               {
-                 printf("POLYGON COLLIDED\n");
-                 DestroyStack(&stack); stack = nullptr;
-                 break;
-               }
+               printf("POLYGON COLLIDED\n");
+               DestroyStack(&stack); stack = nullptr;
              }
+
 
              //see if enemy is inside of poly
              if(IsPolygonClosed(stack,event.motion.x,event.motion.y))
@@ -273,16 +326,24 @@ int main( int argc, char *argv[] )
                }
                counter = 0;
 
-               for(int i=0;i<4;i++)
+               // for(int i=0;i<4;i++)
+               // {
+               //   if(pnpoly(enemy1.boundingBox[i], polyPoints, GetStackCount(stack))!= 0)
+               //   {
+               //     enemy1.hp-=1;
+               //     printf("Current hp: %d\n",enemy1.hp);
+               //     enemy1.captured = true;
+               //     break;
+               //   }
+               // }
+               if(IsBoxInsideOfPoly(enemy1.enemyPosX+enemy1.animationSetXoffset,enemy1.enemyPosY+enemy1.animationSetYoffset,
+                 enemy1.enemyWidth,enemy1.enemyHeight, polyPoints, GetStackCount(stack)))
                {
-                 if(pnpoly(enemy1.boundingBox[i], polyPoints, GetStackCount(stack))!= 0)
-                 {
-                   enemy1.hp-=1;
-                   printf("Current hp: %d\n",enemy1.hp);
-                   enemy1.captured = true;
-                   break;
-                 }
+                 enemy1.hp-=1;
+                 printf("Current hp: %d\n",enemy1.hp);
+                 enemy1.captured = true;
                }
+
                free(polyPoints); polyPoints = nullptr;
                DestroyStack(&stack); stack = nullptr;
              }
@@ -312,21 +373,22 @@ int main( int argc, char *argv[] )
         }
       }
 
-      enemy1.animationCurrentTime = SDL_GetTicks();
-      if (enemy1.animationCurrentTime > enemy1.animationLastTime + 1000/10) {
-
-        testAnimationId++;
-        if(testAnimationId > 4) testAnimationId = 0;
-        enemy1.animationLastTime = enemy1.animationCurrentTime;
-      }
+      EnemyAnimationTimer(&enemy1);
+      // enemy1.animationCurrentTime = SDL_GetTicks();
+      // if (enemy1.animationCurrentTime > enemy1.animationLastTime + 1000/10) {
+      //
+      //   enemy1.currentSpriteId++;
+      //   if(enemy1.currentSpriteId > (enemy1.animationSet[enemy1.animationSet[currentAnimationSetId].spritesPerRow
+      //   * enemy1.animationSet[enemy1.animationSet[currentAnimationSetId].spritesPerColumn) ) enemy1.currentSpriteId = 0;
+      //   enemy1.animationLastTime = enemy1.animationCurrentTime;
+      // }
 
       SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00);
       SDL_RenderClear(renderer);
 
       DrawMap(tileset_grass,renderer);
       DrawCurrentPolygon(stack,renderer);
-      // DrawEnemy(enemy1,renderer);
-      DrawSpriteFromAnimation(testAnimationId,idle_animation,renderer);
+      DrawEnemy(enemy1,renderer);
 
       SDL_RenderPresent(renderer);
 

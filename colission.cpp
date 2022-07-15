@@ -1,4 +1,7 @@
 
+struct Point{
+  float x,y;
+};
 //source: https://gamedev.stackexchange.com/questions/26004/how-to-detect-2d-line-on-line-collision
 
 bool IsIntersecting(Point a, Point b, Point c, Point d)
@@ -40,4 +43,49 @@ bool PolygonHeadCollidingWithLine(Coord *stack,int lineCount /*starting from hea
     }
     return false;
   }
+}
+
+//this collision includes checks for middle of the box with 2 lines from opposite vertexes
+bool PolygonHeadCollidingWithBox(Coord *stack,int lineCount,float boxOriginX,float boxOriginY,float boxWidth,float boxHeight)
+{
+  //cross1 (topleft to botright)
+  if(PolygonHeadCollidingWithLine(stack,lineCount,{boxOriginX,boxOriginY},{boxOriginX+boxWidth,boxOriginY+boxHeight})) return true;
+  //cross2 (topright to botleft)
+  else if(PolygonHeadCollidingWithLine(stack,lineCount,{boxOriginX+boxWidth,boxOriginY},{boxOriginX,boxOriginY+boxHeight})) return true;
+  //top
+  else if(PolygonHeadCollidingWithLine(stack,lineCount,{boxOriginX,boxOriginY},{boxOriginX+boxWidth,boxOriginY})) return true;
+  //right
+  else if(PolygonHeadCollidingWithLine(stack,lineCount,{boxOriginX+boxWidth,boxOriginY},{boxOriginX+boxWidth,boxOriginY+boxHeight})) return true;
+  //bot
+  else if(PolygonHeadCollidingWithLine(stack,lineCount,{boxOriginX,boxOriginY+boxHeight},{boxOriginX+boxWidth,boxOriginY+boxHeight})) return true;
+  //left
+  else if(PolygonHeadCollidingWithLine(stack,lineCount,{boxOriginX,boxOriginY},{boxOriginX,boxOriginY+boxHeight})) return true;
+
+  else return false;
+}
+
+int pnpoly(Point P,Point* V,int n)
+{
+  //modified version of: https://stackoverflow.com/questions/11716268/point-in-polygon-algorithm#:~:text=By%20repeatedly%20inverting%20the%20value,number%2C%20the%20point%20is%20outside.
+  int i, j, c = 0;
+  for (i = 0, j = n-1; i < n; j = i++) {
+    if ( ((V[i].y>P.y) != (V[j].y>P.y)) &&
+     (P.x < (V[j].x-V[i].x) * (P.y-V[i].y) / (V[j].y-V[i].y) + V[i].x) )
+       c = !c;
+  }
+  return c;
+}
+
+bool IsBoxInsideOfPoly(float boxOriginX,float boxOriginY,float boxWidth,float boxHeight,Point* polygonPoints,int numberOfPolygonPoints)
+{
+  //topleft
+  if(pnpoly({boxOriginX,boxOriginY},polygonPoints,numberOfPolygonPoints) != 0) return true;
+  //topright
+  else if(pnpoly({boxOriginX+boxWidth,boxOriginY},polygonPoints,numberOfPolygonPoints) != 0) return true;
+  //botright
+  else if(pnpoly({boxOriginX+boxWidth,boxOriginY+boxHeight},polygonPoints,numberOfPolygonPoints) != 0) return true;
+  //botleft
+  else if(pnpoly({boxOriginX,boxOriginY+boxHeight},polygonPoints,numberOfPolygonPoints) != 0) return true;
+
+  else return false;
 }
