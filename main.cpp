@@ -26,6 +26,7 @@ struct enemy{
   SDL_Texture* texture = nullptr;
   int img_width,img_height;
 
+  int animationCurrentTime, animationLastTime = 0;
 };
 enemy enemy1;
 
@@ -172,7 +173,13 @@ int main( int argc, char *argv[] )
 
     InitializeEnemy1(renderer);
     LoadLevelFromFile(&tileset_grass,"./lvl1.level");
-    LoadSpriteSheet(renderer,&tileset_grass);
+    LoadLevelSpriteSheet(renderer,&tileset_grass,"./resources/Top_Down-Basic/Tileset_Grass.png",8,8 /*8 x 8 spritesheet*/,
+      100,0/*x,y starting pos on screen*/,4.0f /*scaling*/);
+    LoadSpriteSheetAnimation(renderer,&atack_animation,"./resources/Ball_and_Chain_Bot/attack.png",
+        8,1,100,100,4.0f);
+    LoadSpriteSheetAnimation(renderer,&idle_animation,"./resources/Ball_and_Chain_Bot/idle.png",
+        5,1,200,200,4.0f);
+    int testAnimationId = 0;
     while ( GameIsRunning )
     {
       /*event handling*/
@@ -305,12 +312,21 @@ int main( int argc, char *argv[] )
         }
       }
 
+      enemy1.animationCurrentTime = SDL_GetTicks();
+      if (enemy1.animationCurrentTime > enemy1.animationLastTime + 1000/10) {
+
+        testAnimationId++;
+        if(testAnimationId > 4) testAnimationId = 0;
+        enemy1.animationLastTime = enemy1.animationCurrentTime;
+      }
+
       SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00);
       SDL_RenderClear(renderer);
 
       DrawMap(tileset_grass,renderer);
       DrawCurrentPolygon(stack,renderer);
-      DrawEnemy(enemy1,renderer);
+      // DrawEnemy(enemy1,renderer);
+      DrawSpriteFromAnimation(testAnimationId,idle_animation,renderer);
 
       SDL_RenderPresent(renderer);
 

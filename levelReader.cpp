@@ -58,7 +58,7 @@ void LoadLevelFromFile(SpriteSheet *spriteSheet,const char *filepath)
           {
             spriteSheet->sprites = (Sprite*) realloc (spriteSheet->sprites,sizeof(Sprite)*numberOfSprites);
             spriteSheet->sprites[numberOfSprites-1].id = atoi(digitsString);
-            printf("%d ",spriteSheet->sprites[numberOfSprites-1].id);
+            // printf("%d ",spriteSheet->sprites[numberOfSprites-1].id);
           }
           EmptyString(digitsString);
           numberOfDigits = 0;
@@ -67,9 +67,9 @@ void LoadLevelFromFile(SpriteSheet *spriteSheet,const char *filepath)
       numberOfSprites++;
       spriteSheet->sprites = (Sprite*) realloc (spriteSheet->sprites,sizeof(Sprite)*numberOfSprites);
       spriteSheet->sprites[numberOfSprites-1].id = atoi(digitsString);
-      printf("%d ",spriteSheet->sprites[numberOfSprites-1].id);
-      
-      printf("end of file normally\n");
+      // printf("%d ",spriteSheet->sprites[numberOfSprites-1].id);
+
+      // printf("end of file normally\n");
     }
   }
   else
