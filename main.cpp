@@ -4,7 +4,6 @@
 #include <time.h>
 #include <math.h>
 #include "FIFO.cpp"
-#include "pointInsidePoly.cpp"
 #include "colission.cpp"
 #include "sprites.cpp"
 #include "levelReader.cpp"
@@ -15,7 +14,11 @@
 # define M_PI         3.141592653589793238462643383279502884L /* pi */
 const int WIDTH = 1340, HEIGHT = 800;
 const int MARGIN_TO_CLOSE_POLY = 80;
-
+struct Hitbox
+{
+  bool isDamaging = false;
+  float startingPosX,startingPosY,width,height;
+};
 struct enemy{
   int enemyPosX,enemyPosY,enemyWidth,enemyHeight; //actual enemy hurtbox dimensions and position
 
@@ -28,6 +31,9 @@ struct enemy{
   int currentNumberOfAnimations = 0;
   int currentAnimationSetId,currentSpriteId = 0;
   int animationSetXoffset, animationSetYoffset; //offset from (0,0) of spritesheet to make boundingbox match sprite (to ignore alpha channel)
+
+  //damaging only hitboxes
+  Hitbox **damageHitboxes;
   //timers for animations
   int animationCurrentTime, animationLastTime = 0;
 };
@@ -45,6 +51,17 @@ void ChangeEnemyAnimationSet(enemy *enemy,int animationSetID)
     float scaling = enemy->animationSet[animationSetID].sprites[0].onScreenSizeRect.w/enemy->animationSet[animationSetID].singleSpriteW;
 
     switch (animationSetID) { //each sprite has its own actual size ignoring the alpha channel of the spritesheet
+      case 0: //atack
+      {
+        //(55 , 9) - (76 , 32)
+
+        enemy->enemyWidth = (76 - 55)*scaling;
+        enemy->enemyHeight = (32 - 9)*scaling;
+        //position offset
+        enemy->animationSetXoffset = 55*scaling;
+        enemy->animationSetYoffset = 9*scaling;
+      }
+      break;
       case 1: //idle
       {
         //(57 , 11) - (73 , 32)
@@ -56,6 +73,7 @@ void ChangeEnemyAnimationSet(enemy *enemy,int animationSetID)
         enemy->animationSetYoffset = 11*scaling;
       }
       break;
+
       default: //width and height of the alpha channel
       {
         enemy->enemyWidth = enemy->animationSet[animationSetID].sprites[0].onScreenSizeRect.w;
@@ -74,6 +92,62 @@ void ChangeEnemyAnimationSet(enemy *enemy,int animationSetID)
     enemy->animationLastTime = 0;
   }
 }
+void LoadAnimationSetDamageHitboxes(enemy *enemy,int type/* 0 = ball and chain bot*/)
+{
+  float scaling = enemy->animationSet[0].sprites[0].onScreenSizeRect.w/enemy->animationSet[0].singleSpriteW;
+  switch(type)
+  {
+    case 0: // ball and chain bot
+    {
+      enemy->damageHitboxes = (Hitbox**) malloc (enemy->currentNumberOfAnimations * sizeof(Hitbox*));
+      for(int i=0;i<enemy->currentNumberOfAnimations;i++)
+      {
+        switch (i) {
+          case 0: //atack animation
+          {
+            enemy->damageHitboxes[i] = (Hitbox*) malloc(8/*frames of atack animation*/ * sizeof(Hitbox));
+
+            for(int j=0;j<(enemy->animationSet[i].spritesPerRow
+              * enemy->animationSet[i].spritesPerColumn);j++)
+              {
+                switch (j) {
+                  case 0: //frame 0
+                  {
+
+                    enemy->damageHitboxes[i][j].isDamaging = true;
+                    // (57,18) - (116,31)
+                    enemy->damageHitboxes[i][j].startingPosX = 57 * scaling;
+                    enemy->damageHitboxes[i][j].startingPosY = 18 * scaling;
+                    enemy->damageHitboxes[i][j].width = (116 - 57) * scaling;
+                    enemy->damageHitboxes[i][j].height = (31 - 18) * scaling;
+                  }
+                  break;
+                  case 4: //frame 4
+                  {
+                    enemy->damageHitboxes[i][j].isDamaging = true;
+                    // each sprite is 126x39
+                    // (52,175) - (112,188)
+                    enemy->damageHitboxes[i][j].startingPosX = 52 * scaling;
+                    enemy->damageHitboxes[i][j].startingPosY = (175 - (39 * j)) * scaling;
+                    enemy->damageHitboxes[i][j].width = (112 - 52) * scaling;
+                    enemy->damageHitboxes[i][j].height = (188 - 175) * scaling;
+                  }
+                  break;
+                }
+              }
+          }
+          break;
+          default: //if that animation set doesnt have damaging hitboxes
+          {
+            enemy->damageHitboxes[i] = nullptr;
+          }
+          break;
+        }
+      }
+    }
+    break;
+  }
+}
 
 void DrawEnemy(enemy enemy,SDL_Renderer *renderer)
 {
@@ -81,16 +155,34 @@ void DrawEnemy(enemy enemy,SDL_Renderer *renderer)
     enemy.enemyPosX,enemy.enemyPosY,renderer);
 
   //debug
-  if(enemy.captured == false)  SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
-  else  SDL_SetRenderDrawColor(renderer, 0, 255, 0, SDL_ALPHA_OPAQUE);
+    //hurtbox
+    if(enemy.captured == false)  SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
+    else  SDL_SetRenderDrawColor(renderer, 0, 255, 0, SDL_ALPHA_OPAQUE);
 
-  SDL_Rect debugEnemyCollider;
-  debugEnemyCollider.x =enemy.enemyPosX+enemy.animationSetXoffset;
-  debugEnemyCollider.y =enemy.enemyPosY+enemy.animationSetYoffset;
-  debugEnemyCollider.w =enemy.enemyWidth;
-  debugEnemyCollider.h =enemy.enemyHeight;
+    SDL_Rect debugEnemyCollider;
+    debugEnemyCollider.x =enemy.enemyPosX+enemy.animationSetXoffset;
+    debugEnemyCollider.y =enemy.enemyPosY+enemy.animationSetYoffset;
+    debugEnemyCollider.w =enemy.enemyWidth;
+    debugEnemyCollider.h =enemy.enemyHeight;
 
-  SDL_RenderDrawRect(renderer,&debugEnemyCollider);
+    SDL_RenderDrawRect(renderer,&debugEnemyCollider);
+
+    //damagin hitboxes
+    if(enemy.damageHitboxes[enemy.currentAnimationSetId]!=nullptr &&
+      enemy.damageHitboxes[enemy.currentAnimationSetId][enemy.currentSpriteId].isDamaging)
+    {
+      SDL_Rect debugEnemyAtackHitbox;
+      debugEnemyAtackHitbox.x = enemy.damageHitboxes[enemy.currentAnimationSetId][enemy.currentSpriteId].startingPosX
+        +enemy.enemyPosX;
+      debugEnemyAtackHitbox.y = enemy.damageHitboxes[enemy.currentAnimationSetId][enemy.currentSpriteId].startingPosY
+        +enemy.enemyPosY;
+      debugEnemyAtackHitbox.w = enemy.damageHitboxes[enemy.currentAnimationSetId][enemy.currentSpriteId].width;
+      debugEnemyAtackHitbox.h = enemy.damageHitboxes[enemy.currentAnimationSetId][enemy.currentSpriteId].height;
+
+      SDL_SetRenderDrawColor(renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);
+      SDL_RenderDrawRect(renderer,&debugEnemyAtackHitbox);
+    }
+
 }
 
 void EnemyAnimationTimer(enemy *enemy)
@@ -204,13 +296,19 @@ int main( int argc, char *argv[] )
       //enemy1
       enemy1.enemyPosX = WIDTH / 2;
       enemy1.enemyPosY = HEIGHT / 2;
-      enemy1.currentNumberOfAnimations = 2;
+      enemy1.currentNumberOfAnimations = 4;
       enemy1.animationSet = (SpriteSheet*) malloc(enemy1.currentNumberOfAnimations*sizeof(SpriteSheet));
       LoadSpriteSheetAnimation(renderer,&enemy1.animationSet[0],"./resources/Ball_and_Chain_Bot/attack.png",
           8,1,100,100,4.0f);
       LoadSpriteSheetAnimation(renderer,&enemy1.animationSet[1],"./resources/Ball_and_Chain_Bot/idle.png",
           5,1,200,200,4.0f);
-      ChangeEnemyAnimationSet(&enemy1,1);
+      LoadSpriteSheetAnimation(renderer,&enemy1.animationSet[2],"./resources/Ball_and_Chain_Bot/charge.png",
+          4,1,200,200,4.0f);
+      LoadSpriteSheetAnimation(renderer,&enemy1.animationSet[3],"./resources/Ball_and_Chain_Bot/run.png",
+          8,1,200,200,4.0f);
+      LoadAnimationSetDamageHitboxes(&enemy1,0/*ball and chain enemy*/);
+
+      ChangeEnemyAnimationSet(&enemy1,0);
 
     while ( GameIsRunning )
     {
@@ -300,8 +398,20 @@ int main( int argc, char *argv[] )
              if(PolygonHeadCollidingWithBox(stack,20,enemy1.enemyPosX+enemy1.animationSetXoffset,enemy1.enemyPosY+enemy1.animationSetYoffset,
                enemy1.enemyWidth,enemy1.enemyHeight))
              {
-               printf("POLYGON COLLIDED\n");
+               printf("HIT ENEMY HURTBOX\n");
                DestroyStack(&stack); stack = nullptr;
+             }
+             else if(enemy1.damageHitboxes[enemy1.currentAnimationSetId]!=nullptr &&
+               enemy1.damageHitboxes[enemy1.currentAnimationSetId][enemy1.currentSpriteId].isDamaging)
+             { //hitting enemy damagin hitboxes
+               if(PolygonHeadCollidingWithBox(stack,30,enemy1.enemyPosX+enemy1.damageHitboxes[enemy1.currentAnimationSetId][enemy1.currentSpriteId].startingPosX,
+                 enemy1.enemyPosY+enemy1.damageHitboxes[enemy1.currentAnimationSetId][enemy1.currentSpriteId].startingPosY,
+                 enemy1.damageHitboxes[enemy1.currentAnimationSetId][enemy1.currentSpriteId].width,
+                 enemy1.damageHitboxes[enemy1.currentAnimationSetId][enemy1.currentSpriteId].height))
+                 {
+                   printf("HIT BY ENEMY ATACK\n");
+                   DestroyStack(&stack); stack = nullptr;
+                 }
              }
 
 

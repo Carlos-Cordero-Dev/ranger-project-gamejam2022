@@ -1,0 +1,3 @@
+-atack patterns
+
+-screen scaling to a sensible resolution (lookup resolutions for consoles)

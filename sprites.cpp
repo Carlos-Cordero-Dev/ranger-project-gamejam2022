@@ -80,7 +80,7 @@ void LoadSpriteSheetAnimation(SDL_Renderer *renderer,SpriteSheet *spriteSheet,co
 
     spriteSheet->spritesPerRow = spriteSheetNumberOfRows;
     spriteSheet->spritesPerColumn = spriteSheetNumberOfCols;
-    printf("sprites col: %d row: %d\n",spriteSheetNumberOfCols,spriteSheetNumberOfRows);
+    // printf("sprites col: %d row: %d\n",spriteSheetNumberOfCols,spriteSheetNumberOfRows);
 
     spriteSheet->sprites = (Sprite*) malloc (spriteSheetNumberOfRows*spriteSheetNumberOfCols*sizeof(Sprite));
     int spriteSizeX,spriteSizeY;
@@ -108,9 +108,9 @@ void LoadSpriteSheetAnimation(SDL_Renderer *renderer,SpriteSheet *spriteSheet,co
         spriteSheet->sprites[currentSprite].onScreenSizeRect.h = /*scaling*/screenScaling*spriteSheet->singleSpriteH;
 
         // printf("id: %d current number of sprites: %d\n",spriteSheet->sprites[currentSprite].id,currentSprite);
-        printf("sprite number: %d\n",currentSprite);
-        printf("size: %d %d\n",spriteSheet->sprites[currentSprite].singleSpriteDimensionsRect.w,spriteSheet->sprites[currentSprite].singleSpriteDimensionsRect.h);
-        printf("pos: %d %d\n",spriteSheet->sprites[currentSprite].singleSpriteDimensionsRect.x,spriteSheet->sprites[currentSprite].singleSpriteDimensionsRect.y);
+        // printf("sprite number: %d\n",currentSprite);
+        // printf("size: %d %d\n",spriteSheet->sprites[currentSprite].singleSpriteDimensionsRect.w,spriteSheet->sprites[currentSprite].singleSpriteDimensionsRect.h);
+        // printf("pos: %d %d\n",spriteSheet->sprites[currentSprite].singleSpriteDimensionsRect.x,spriteSheet->sprites[currentSprite].singleSpriteDimensionsRect.y);
         currentSprite++;
       }
     }
