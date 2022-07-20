@@ -1,3 +1,11 @@
--atack patterns
+-hp bar under enemy (these 2 are separated
+-atack patterns (IE: function "enemybehaviour that makes the enemy chose a random action (can
+	be more or less favoured to do something IE: low hp : atack more) and chain animations and states accordingly)
+
+-map design
+-screen scrolling (look up how to move camera sdl)
+-cooler laze for the player (thicker and cool design maybe top)
 
 -screen scaling to a sensible resolution (lookup resolutions for consoles)
+-if you are gonna scale the screen it might be a good idea to make every single scaling 
+ depend on the screen resolution

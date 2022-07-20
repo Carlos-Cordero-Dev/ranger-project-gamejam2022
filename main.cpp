@@ -6,6 +6,7 @@
 #include "FIFO.cpp"
 #include "colission.cpp"
 #include "sprites.cpp"
+#include "healthbar.cpp"
 #include "levelReader.cpp"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
@@ -14,6 +15,7 @@
 # define M_PI         3.141592653589793238462643383279502884L /* pi */
 const int WIDTH = 1340, HEIGHT = 800;
 const int MARGIN_TO_CLOSE_POLY = 80;
+const int HEALTHBAR_X_POS = 10,HEALTHBAR_Y_POS = 10;
 struct Hitbox
 {
   bool isDamaging = false;
@@ -24,14 +26,14 @@ struct enemy{
 
   bool captured = false;
   int timeMilisecondsSinceCaptured = 0.0f;
-  int hp= 50;
+  int hp= 100;
 
   //sprites
   SpriteSheet *animationSet; /*each enemy has its specified animation sets(ex: enemy 1 has atack and idle so far) */
   int currentNumberOfAnimations = 0;
   int currentAnimationSetId,currentSpriteId = 0;
   int animationSetXoffset, animationSetYoffset; //offset from (0,0) of spritesheet to make boundingbox match sprite (to ignore alpha channel)
-
+  int healthbarXoffset,healthbarYoffset;
   //damaging only hitboxes
   Hitbox **damageHitboxes;
   //timers for animations
@@ -73,7 +75,61 @@ void ChangeEnemyAnimationSet(enemy *enemy,int animationSetID)
         enemy->animationSetYoffset = 11*scaling;
       }
       break;
+      case 2: //transition to charge
+      {
+        //(54 , 6) - (78 , 32)
 
+        enemy->enemyWidth = (78 - 54)*scaling;
+        enemy->enemyHeight = (32 - 6)*scaling;
+        //position offset
+        enemy->animationSetXoffset = 54*scaling;
+        enemy->animationSetYoffset = 6*scaling;
+      }
+      break;
+      case 3: //charge
+      {
+        //(52 , 8) - (78 , 32)
+
+        enemy->enemyWidth = (78 - 52)*scaling;
+        enemy->enemyHeight = (32 - 8)*scaling;
+        //position offset
+        enemy->animationSetXoffset = 52*scaling;
+        enemy->animationSetYoffset = 8*scaling;
+      }
+      break;
+      case 4: //run
+      {
+        //(55 , 9) - (78 , 32)
+
+        enemy->enemyWidth = (78 - 55)*scaling;
+        enemy->enemyHeight = (32 - 9)*scaling;
+        //position offset
+        enemy->animationSetXoffset = 55*scaling;
+        enemy->animationSetYoffset = 9*scaling;
+      }
+      break;
+      case 5: //hit
+      {
+        //(54 , 6) - (78 , 32)
+
+        enemy->enemyWidth = (78 - 54)*scaling;
+        enemy->enemyHeight = (32 - 6)*scaling;
+        //position offset
+        enemy->animationSetXoffset = 54*scaling;
+        enemy->animationSetYoffset = 6*scaling;
+      }
+      break;
+      case 6: //death
+      {
+        //(56 , 10) - (78 , 32)
+
+        enemy->enemyWidth = (78 - 56)*scaling;
+        enemy->enemyHeight = (32 - 10)*scaling;
+        //position offset
+        enemy->animationSetXoffset = 56*scaling;
+        enemy->animationSetYoffset = 10*scaling;
+      }
+      break;
       default: //width and height of the alpha channel
       {
         enemy->enemyWidth = enemy->animationSet[animationSetID].sprites[0].onScreenSizeRect.w;
@@ -90,6 +146,10 @@ void ChangeEnemyAnimationSet(enemy *enemy,int animationSetID)
 
     enemy->animationCurrentTime = 0;
     enemy->animationLastTime = 0;
+
+    //healthbar x,y offset
+    enemy->healthbarXoffset = 51  * scaling;
+    enemy->healthbarYoffset = 125 * scaling;
   }
 }
 void LoadAnimationSetDamageHitboxes(enemy *enemy,int type/* 0 = ball and chain bot*/)
@@ -292,20 +352,35 @@ int main( int argc, char *argv[] )
     LoadLevelSpriteSheet(renderer,&tileset_grass,"./resources/Top_Down-Basic/Tileset_Grass.png",8,8 /*8 x 8 spritesheet*/,
       100,0/*x,y starting pos on screen*/,4.0f /*scaling*/);
 
+    //healthbar initialization
+      //player healthbar
+      LoadSingleSprite(renderer,&playerHealthbar.container,1,41,(91-1),(57-41),4.0f,"./resources/healthbar/rpg_style.png");
+      LoadSingleSprite(renderer,&playerHealthbar.background,15,28,(89-15),(36-28),4.0f,"./resources/healthbar/rpg_style.png");
+      LoadSingleSprite(renderer,&playerHealthbar.bar,15,10,(89-15),(18-10),4.0f,"./resources/healthbar/rpg_style.png");
+      //enemy healthbar
+      LoadSingleSprite(renderer,&enemyHealthbar.bar,23,30,(81-23),(34-30),4.0f,"./resources/healthbar/enemy_healthbar.png");
+
     //enemy initilization
       //enemy1
       enemy1.enemyPosX = WIDTH / 2;
       enemy1.enemyPosY = HEIGHT / 2;
-      enemy1.currentNumberOfAnimations = 4;
+      enemy1.currentNumberOfAnimations = 7;
       enemy1.animationSet = (SpriteSheet*) malloc(enemy1.currentNumberOfAnimations*sizeof(SpriteSheet));
       LoadSpriteSheetAnimation(renderer,&enemy1.animationSet[0],"./resources/Ball_and_Chain_Bot/attack.png",
           8,1,100,100,4.0f);
       LoadSpriteSheetAnimation(renderer,&enemy1.animationSet[1],"./resources/Ball_and_Chain_Bot/idle.png",
           5,1,200,200,4.0f);
-      LoadSpriteSheetAnimation(renderer,&enemy1.animationSet[2],"./resources/Ball_and_Chain_Bot/charge.png",
+          LoadSpriteSheetAnimation(renderer,&enemy1.animationSet[2],"./resources/Ball_and_Chain_Bot/transition_to_charge.png",
+              2,1,200,200,4.0f);
+      LoadSpriteSheetAnimation(renderer,&enemy1.animationSet[3],"./resources/Ball_and_Chain_Bot/charge.png",
           4,1,200,200,4.0f);
-      LoadSpriteSheetAnimation(renderer,&enemy1.animationSet[3],"./resources/Ball_and_Chain_Bot/run.png",
+      LoadSpriteSheetAnimation(renderer,&enemy1.animationSet[4],"./resources/Ball_and_Chain_Bot/run.png",
           8,1,200,200,4.0f);
+      LoadSpriteSheetAnimation(renderer,&enemy1.animationSet[5],"./resources/Ball_and_Chain_Bot/hit.png",
+          2,1,200,200,4.0f);
+      LoadSpriteSheetAnimation(renderer,&enemy1.animationSet[6],"./resources/Ball_and_Chain_Bot/death.png",
+          5,1,200,200,4.0f);
+
       LoadAnimationSetDamageHitboxes(&enemy1,0/*ball and chain enemy*/);
 
       ChangeEnemyAnimationSet(&enemy1,0);
@@ -354,6 +429,14 @@ int main( int argc, char *argv[] )
             else if(state[SDL_SCANCODE_DOWN])
             {
               enemy1.enemyPosY+=speed;
+            }
+            if(state[SDL_SCANCODE_SPACE])
+            {
+              if(enemy1.currentAnimationSetId+1 >= enemy1.currentNumberOfAnimations)
+                ChangeEnemyAnimationSet(&enemy1,0);
+              else ChangeEnemyAnimationSet(&enemy1,enemy1.currentAnimationSetId+1);
+
+              playerHealthbar.currentHp++;
             }
           }
           break;
@@ -410,6 +493,7 @@ int main( int argc, char *argv[] )
                  enemy1.damageHitboxes[enemy1.currentAnimationSetId][enemy1.currentSpriteId].height))
                  {
                    printf("HIT BY ENEMY ATACK\n");
+                   playerHealthbar.currentHp-=5;
                    DestroyStack(&stack); stack = nullptr;
                  }
              }
@@ -436,21 +520,12 @@ int main( int argc, char *argv[] )
                }
                counter = 0;
 
-               // for(int i=0;i<4;i++)
-               // {
-               //   if(pnpoly(enemy1.boundingBox[i], polyPoints, GetStackCount(stack))!= 0)
-               //   {
-               //     enemy1.hp-=1;
-               //     printf("Current hp: %d\n",enemy1.hp);
-               //     enemy1.captured = true;
-               //     break;
-               //   }
-               // }
                if(IsBoxInsideOfPoly(enemy1.enemyPosX+enemy1.animationSetXoffset,enemy1.enemyPosY+enemy1.animationSetYoffset,
                  enemy1.enemyWidth,enemy1.enemyHeight, polyPoints, GetStackCount(stack)))
                {
                  enemy1.hp-=1;
                  printf("Current hp: %d\n",enemy1.hp);
+                 playerHealthbar.currentHp++;
                  enemy1.captured = true;
                }
 
@@ -497,8 +572,11 @@ int main( int argc, char *argv[] )
       SDL_RenderClear(renderer);
 
       DrawMap(tileset_grass,renderer);
+      DrawPlayerHealthBar(&playerHealthbar,HEALTHBAR_X_POS,HEALTHBAR_Y_POS,renderer);
       DrawCurrentPolygon(stack,renderer);
       DrawEnemy(enemy1,renderer);
+      DrawEnemyHealthbar(&enemyHealthbar,enemy1.hp,enemy1.enemyPosX + enemy1.healthbarXoffset,
+        enemy1.healthbarYoffset+ enemy1.animationSetYoffset,renderer);
 
       SDL_RenderPresent(renderer);
 

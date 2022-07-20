@@ -4,8 +4,8 @@
 struct Sprite{
   int id; //id on the numbered spriteSheet
   SDL_Texture* texture = nullptr;
-  SDL_Rect onScreenSizeRect; //dimensions that the sprite will have on screen
   SDL_Rect singleSpriteDimensionsRect; //if spriteSheet is 800 x 600, here goes the dimensions of every individual sprite
+  SDL_Rect onScreenSizeRect; //dimensions that the sprite will have on screen
 
 };
 struct SpriteSheet{
@@ -107,16 +107,37 @@ void LoadSpriteSheetAnimation(SDL_Renderer *renderer,SpriteSheet *spriteSheet,co
         spriteSheet->sprites[currentSprite].onScreenSizeRect.w = /*scaling*/screenScaling*spriteSheet->singleSpriteW;
         spriteSheet->sprites[currentSprite].onScreenSizeRect.h = /*scaling*/screenScaling*spriteSheet->singleSpriteH;
 
-        // printf("id: %d current number of sprites: %d\n",spriteSheet->sprites[currentSprite].id,currentSprite);
-        // printf("sprite number: %d\n",currentSprite);
-        // printf("size: %d %d\n",spriteSheet->sprites[currentSprite].singleSpriteDimensionsRect.w,spriteSheet->sprites[currentSprite].singleSpriteDimensionsRect.h);
-        // printf("pos: %d %d\n",spriteSheet->sprites[currentSprite].singleSpriteDimensionsRect.x,spriteSheet->sprites[currentSprite].singleSpriteDimensionsRect.y);
         currentSprite++;
       }
     }
 
   }
 }
+
+void LoadSingleSprite(SDL_Renderer *renderer,Sprite *sprite,int startingPosX,int startingPosY,
+  int spriteWidth,int spriteHeight,float screenScaling,const char *filepath)
+{
+  sprite->texture = IMG_LoadTexture(renderer,filepath);
+  if (!sprite->texture) {
+       SDL_Log("Couldn't load sprite: %s\n", SDL_GetError());
+  }
+  else
+  {
+    //dimensions in spritesheet
+    sprite->singleSpriteDimensionsRect.x = startingPosX;
+    sprite->singleSpriteDimensionsRect.y = startingPosY;
+    sprite->singleSpriteDimensionsRect.w = spriteWidth;
+    sprite->singleSpriteDimensionsRect.h = spriteHeight;
+
+    //dimension on screen (can be changed later)
+    sprite->onScreenSizeRect.x = 0;
+    sprite->onScreenSizeRect.y = 0;
+    sprite->onScreenSizeRect.w = spriteWidth * screenScaling;
+    sprite->onScreenSizeRect.h = spriteHeight * screenScaling;
+  }
+}
+
+
 void DrawMap(SpriteSheet spriteSheet,SDL_Renderer *renderer)
 {
   for(int i = 0 ;i<spriteSheet.spritesPerRow * spriteSheet.spritesPerColumn;i++)
@@ -140,4 +161,12 @@ void DrawSpriteFromAnimation(int id,SpriteSheet *spriteSheet,int screenXpos,int 
     SDL_RenderCopy(renderer,spriteSheet->spriteSheetTexture,&spriteSheet->sprites[id].singleSpriteDimensionsRect,
       &spriteSheet->sprites[id].onScreenSizeRect);
   }
+}
+
+void DrawSingleSprite(Sprite *sprite,int screenXpos,int screenYpos,SDL_Renderer *renderer)
+{
+  sprite->onScreenSizeRect.x = screenXpos;
+  sprite->onScreenSizeRect.y = screenYpos;
+
+  SDL_RenderCopy(renderer,sprite->texture,&sprite->singleSpriteDimensionsRect,&sprite->onScreenSizeRect);
 }
