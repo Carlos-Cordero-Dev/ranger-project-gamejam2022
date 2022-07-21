@@ -2,11 +2,6 @@
 #include <conio.h>
 #include <stdlib.h>
 
-struct Coord
-{
-  int x,y;
-  Coord *nextCoord;
-};
 
 void InsertCoord(Coord **stack, int x, int y)
 {

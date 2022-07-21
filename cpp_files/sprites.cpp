@@ -1,22 +1,3 @@
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
-
-struct Sprite{
-  int id; //id on the numbered spriteSheet
-  SDL_Texture* texture = nullptr;
-  SDL_Rect singleSpriteDimensionsRect; //if spriteSheet is 800 x 600, here goes the dimensions of every individual sprite
-  SDL_Rect onScreenSizeRect; //dimensions that the sprite will have on screen
-
-};
-struct SpriteSheet{
-
-  Sprite testSprite; //later it'll be a vector / pointer of sprites
-  Sprite *sprites = nullptr;
-  SDL_Texture* spriteSheetTexture = nullptr;
-  int singleSpriteW,singleSpriteH,spritesPerRow,spritesPerColumn; //sprites per row/column dont match the ones in the spritesheet,
-                                                                  //these are meant to match colunns and rows from the .level files
-};
-SpriteSheet tileset_grass;
 
 void LoadLevelSpriteSheet(SDL_Renderer *renderer,SpriteSheet *spriteSheet,const char *filepath,
   int spriteSheetNumberOfRows,int spriteSheetNumberOfCols,int screenXoffset,int screenYoffset,float screenScaling)

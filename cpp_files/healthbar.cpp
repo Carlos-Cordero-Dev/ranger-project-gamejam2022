@@ -1,11 +1,4 @@
 
-struct Healthbar
-{
-  Sprite container,background,bar;
-  int currentHp = 100;
-};
-Healthbar playerHealthbar,enemyHealthbar;
-
 void DrawPlayerHealthBar(Healthbar *healthbar,int screenXpos,int screenYpos,SDL_Renderer *renderer)
 {
   //container
@@ -34,7 +27,7 @@ void DrawEnemyHealthbar(Healthbar *healthbar,int currentEnemyHp,int screenXpos,i
   SDL_Rect currentOnScreenSizeRect = healthbar->bar.onScreenSizeRect;
   currentOnScreenSizeRect.x = screenXpos;
   currentOnScreenSizeRect.y = screenYpos;
-  currentOnScreenSizeRect.w*=0.5f;
+  currentOnScreenSizeRect.w*=0.5f; //too wide otherwise
   currentOnScreenSizeRect.w = (currentEnemyHp * currentOnScreenSizeRect.w) / 100;
 
   SDL_RenderCopy(renderer,healthbar->bar.texture,&currentBarDimensionsRect,&currentOnScreenSizeRect);

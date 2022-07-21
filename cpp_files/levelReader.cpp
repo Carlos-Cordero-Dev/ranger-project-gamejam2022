@@ -1,6 +1,3 @@
-#include <SDL2/SDL.h>
-#include <stdlib.h> //atoi
-#include <math.h> //pow
 
 void EmptyString(char string[3])
 {
